@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Убей Володю</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        neon: {
+                            cyan: '#00D9FF',
+                            pink: '#FF006E',
+                            purple: '#8338EC',
+                            orange: '#FFBE0B'
+                        }
+                    },
+                    keyframes: {
+                        glow: {
+                            '0%, 100%': { textShadow: '0 0 10px #00D9FF, 0 0 20px #00D9FF' },
+                            '50%': { textShadow: '0 0 20px #00D9FF, 0 0 30px #8338EC' }
+                        },
+                        pulse: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.5' }
+                        },
+                        spin: {
+                            'to': { transform: 'rotate(360deg)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        }
+                    },
+                    animation: {
+                        glow: 'glow 2s ease-in-out infinite',
+                        'pulse-fast': 'pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'spin-slow': 'spin 3s linear infinite',
+                        float: 'float 3s ease-in-out infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body, html {
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        .theme-btn {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .theme-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+        .theme-btn:hover::before {
+            left: 100%;
+        }
+        .theme-btn.active {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 217, 255, 0.8), inset 0 0 15px rgba(0, 217, 255, 0.3);
+        }
+        canvas {
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: none;
+        }
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid rgba(0, 217, 255, 0.5);
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .control-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: rgba(0, 217, 255, 1);
+            transform: translateX(5px);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white overflow-hidden" style="margin: 0; padding: 0; width: 100%; height: 100%;">
+    <!-- Animated background -->
+    <div class="fixed inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 -z-10">
+        <div class="absolute inset-0 opacity-20">
+            <div class="animate-pulse absolute w-96 h-96 bg-neon-cyan rounded-full blur-3xl top-1/4 left-1/4"></div>
+            <div class="animate-pulse absolute w-96 h-96 bg-neon-purple rounded-full blur-3xl bottom-1/4 right-1/4" style="animation-delay: 1s;"></div>
+        </div>
+    </div>
+
+    <div class="w-full h-screen flex flex-col" style="margin: 0; padding: 0;">
+        <!-- Header HUD -->
+            <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-neon-cyan/30 px-3 py-2 sm:px-6 sm:py-4 flex-shrink-0">
+            <div class="max-w-7xl mx-auto flex justify-between items-center flex-col sm:flex-row gap-3 sm:gap-0">
+                <div class="text-2xl sm:text-3xl font-bold animate-glow">
+                    SPACE BATTLE
+                </div>
+                <div class="flex gap-3 sm:gap-8 text-sm sm:text-lg flex-wrap justify-center">
+                    <div class="bg-slate-800/50 border border-neon-cyan/50 px-3 py-2 sm:px-4 rounded-lg">
+                        <span class="text-neon-cyan font-bold text-xs sm:text-base">SCORE</span>
+                        <div id="score" class="text-lg sm:text-2xl font-bold text-neon-orange">0</div>
+                    </div>
+                    <div class="bg-slate-800/50 border border-neon-pink/50 px-3 py-2 sm:px-4 rounded-lg">
+                        <span class="text-neon-pink font-bold text-xs sm:text-base">WAVES</span>
+                        <div id="waves" class="text-lg sm:text-2xl font-bold text-neon-pink">1</div>
+                    </div>
+                    <div class="bg-slate-800/50 border border-neon-purple/50 px-3 py-2 sm:px-4 rounded-lg">
+                        <span class="text-neon-purple font-bold text-xs sm:text-base">HEALTH</span>
+                        <div id="health" class="text-lg sm:text-2xl font-bold text-green-400">100%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game container -->
+        <div class="flex-1 relative overflow-hidden bg-gradient-to-b from-slate-950 to-slate-900">
+            <!-- Canvas for game -->
+            <canvas id="gameCanvas" class="w-full h-full" style="display: block; margin: 0; padding: 0;"></canvas>
+
+            <!-- Game over overlay -->
+            <div id="gameOverScreen" class="hidden absolute inset-0 bg-black/80 flex items-center justify-center z-50">
+                <div class="text-center">
+                    <div class="text-5xl sm:text-6xl font-bold mb-8 animate-glow">GAME OVER</div>
+                    <div class="text-2xl sm:text-3xl text-neon-orange mb-8">
+                        Final Score: <span id="finalScore">0</span>
+                    </div>
+                    <button id="restartBtn" class="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-neon-cyan to-neon-purple text-white font-bold text-xl sm:text-2xl rounded-lg hover:shadow-lg hover:shadow-neon-cyan/50 transition transform hover:scale-110">
+                        RESTART
+                    </button>
+                </div>
+            </div>
+
+    <!-- Menu overlay -->
+            <div id="menuScreen" class="absolute inset-0 bg-gradient-to-b from-black/95 to-black/85 flex items-center justify-center z-50 overflow-y-auto">
+                <div class="text-center max-w-4xl w-full px-4 py-8">
+                    <!-- Title Section -->
+                    <div class="mb-12">
+                        <div class="text-5xl sm:text-7xl font-bold mb-4 bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-pink bg-clip-text text-transparent animate-glow">
+                            SPACE BATTLE
+                        </div>
+                        <div class="h-1 w-24 mx-auto bg-gradient-to-r from-neon-cyan to-neon-purple mb-4"></div>
+                        <p class="text-lg sm:text-xl text-slate-300">Destroy waves of enemies and defeat the boss</p>
+                    </div>
+                    
+                    <!-- Theme Selector Section -->
+                    <div class="mb-12 bg-gradient-to-br from-slate-800/40 to-slate-900/40 border border-neon-cyan/30 rounded-xl p-6 sm:p-8 backdrop-blur-sm">
+                        <h2 class="text-neon-cyan font-bold mb-6 text-base sm:text-lg uppercase tracking-wider">Select Theme</h2>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                            <button id="themeNeon" class="px-4 sm:px-6 py-3 text-sm sm:text-base bg-gradient-to-r from-neon-cyan to-neon-purple rounded-lg hover:shadow-lg hover:shadow-neon-cyan/50 transition font-bold theme-btn active">
+                                Neon
+                            </button>
+                            <button id="themeDark" class="px-4 sm:px-6 py-3 text-sm sm:text-base bg-gradient-to-r from-gray-600 to-gray-800 rounded-lg hover:shadow-lg hover:shadow-gray-400/50 transition font-bold theme-btn">
+                                Dark
+                            </button>
+                            <button id="themeFire" class="px-4 sm:px-6 py-3 text-sm sm:text-base bg-gradient-to-r from-red-600 to-red-800 rounded-lg hover:shadow-lg hover:shadow-red-400/50 transition font-bold theme-btn">
+                                Fire
+                            </button>
+                            <button id="themeIce" class="px-4 sm:px-6 py-3 text-sm sm:text-base bg-gradient-to-r from-blue-500 to-blue-700 rounded-lg hover:shadow-lg hover:shadow-blue-400/50 transition font-bold theme-btn">
+                                Ice
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Game Features Section -->
+                    <div class="mb-12 bg-gradient-to-br from-slate-800/40 to-slate-900/40 border border-neon-purple/30 rounded-xl p-6 sm:p-8 backdrop-blur-sm">
+                        <h2 class="text-neon-purple font-bold mb-6 text-base sm:text-lg uppercase tracking-wider">How to Play</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="control-item">
+                                <div class="text-neon-cyan font-bold">MOVE</div>
+                                <span class="text-slate-300">A/D or Arrow Keys</span>
+                            </div>
+                            <div class="control-item">
+                                <div class="text-neon-orange font-bold">SHOOT</div>
+                                <span class="text-slate-300">SPACE or Click</span>
+                            </div>
+                            <div class="control-item">
+                                <div class="text-neon-pink font-bold">ENEMIES</div>
+                                <span class="text-slate-300">Destroy all waves</span>
+                            </div>
+                            <div class="control-item">
+                                <div class="text-neon-cyan font-bold">BOSS</div>
+                                <span class="text-slate-300">Every 5 waves</span>
+                            </div>
+                            <div class="control-item">
+                                <div class="text-green-400 font-bold">BONUSES</div>
+                                <span class="text-slate-300">Shield & Health drops</span>
+                            </div>
+                            <div class="control-item">
+                                <div class="text-neon-purple font-bold">MOBILE</div>
+                                <span class="text-slate-300">Touch left/right</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Start Button -->
+                    <button id="startBtn" class="px-12 sm:px-16 py-4 sm:py-5 bg-gradient-to-r from-neon-cyan to-neon-purple text-white font-bold text-2xl sm:text-3xl rounded-lg hover:shadow-lg hover:shadow-neon-cyan/50 transition transform hover:scale-105 animate-pulse w-full sm:w-auto uppercase tracking-wider">
+                        Start Game
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-slate-900 border-t border-neon-cyan/30 px-4 py-2 text-center text-xs sm:text-sm text-slate-400 flex-shrink-0">
+            SPACE BATTLE | Mobile Friendly | Boss Waves Every 5 Levels
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
